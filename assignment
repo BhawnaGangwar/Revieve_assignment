@@ -1,0 +1,89 @@
+import csv
+from collections import defaultdict
+import os
+
+
+currentDir = os.path.dirname(os.path.abspath(__file__))
+customerFilePath = os.path.join(currentDir, r'customers.csv')
+orderFilePath = os.path.join(currentDir, r'orders.csv')
+productFilePath = os.path.join(currentDir, r'products.csv')
+
+def readFile(filePath, firstKey, secondKey, secondItemInList):
+    readData = {}
+    with open(filePath, mode='r') as infile:
+        reader = csv.reader(infile)
+        next(reader)
+        for row in reader:
+            secondValue = row[2].split(' ') if secondItemInList else row[2]
+            readData[row[0]] = {firstKey: row[1], secondKey: secondValue}
+            
+    return readData
+
+def task1(orderInfo, productInfo):
+    orderPrices = {}
+    for key in orderInfo:
+        productList = orderInfo[key]['products']
+        totalCost = 0
+        for product in productList:
+            totalCost += float(productInfo[product]['cost'])
+            
+        orderPrices[key] = str(totalCost)
+        
+    with open(os.path.join(currentDir,r'order_prices.csv'), 'w', newline='') as csvfile:
+        fieldnames = ['id', 'euros']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for key in orderPrices:
+            writer.writerow({'id': key, 'euros': orderPrices[key]})
+            
+def task2(orderInfo, productInfo):
+    customerProducts = defaultdict(list)
+    for key in orderInfo:
+        productList = orderInfo[key]['products']
+        customerId = orderInfo[key]['customer']
+        for product in productList:
+            customerProducts[product].append(customerId)
+            
+    with open(os.path.join(currentDir,r'product_customers.csv'), 'w', newline='') as csvfile:
+        fieldnames = ['id', 'customer_ids']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for key in customerProducts:
+            writer.writerow({'id': key, 'customer_ids': ' '.join(customerProducts[key])})
+    
+def task3(orderInfo, productInfo, customerInfo):        
+    customerRanking = {}
+    for key in orderInfo:
+        productList = orderInfo[key]['products']
+        customerId = orderInfo[key]['customer']
+        totalCost = 0
+        for product in productList:
+            totalCost += float(productInfo[product]['cost'])
+        if customerId in customerRanking:
+            customerRanking[customerId] += totalCost
+        else:
+            customerRanking[customerId] = totalCost
+            
+    sortedCustomerRanking = sorted(customerRanking.items(), key=lambda kv: kv[1])
+            
+    with open(os.path.join(currentDir,r'customer_ranking.csv'), 'w', newline='') as csvfile:
+        fieldnames = ['id', 'firstname', 'lastname', 'total_euros']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for item in reversed(sortedCustomerRanking):
+            customerId = item[0]
+            cost = item[1]
+            customerDetails = customerInfo[customerId]
+            writer.writerow({'id': customerId, 'firstname': customerDetails['firstname'], 'lastname': customerDetails['lastname'], 'total_euros': cost})
+
+customerInfo = readFile(customerFilePath, 'firstname', 'lastname', False)
+productInfo = readFile(productFilePath, 'name', 'cost', False)
+orderInfo = readFile(orderFilePath, 'customer', 'products', True)
+
+task1(orderInfo, productInfo)
+task2(orderInfo, productInfo)
+task3(orderInfo, productInfo, customerInfo)
+
